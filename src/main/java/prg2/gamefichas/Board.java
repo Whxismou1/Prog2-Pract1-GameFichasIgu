@@ -1,7 +1,9 @@
 package prg2.gamefichas;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class Board {
     int juegosTotales;
@@ -9,6 +11,9 @@ public class Board {
     List<List<String>> boardLists;
     List<Integer> solutions;
     private char[][] gameBoard;
+    private int[] fichasLeftGame;
+    private Piece[][] pieceGameBoard;
+    private int numMovs;
 
     Board(int juegosReales, List<List<String>> validList) {
         this.juegosTotales = juegosReales;
@@ -32,7 +37,7 @@ public class Board {
                 matrix = new char[row][col];
                 rellenarMatriz(matrix, boardLists.get(i), i);
                 System.out.println("Matriz qeuda");
-                printMatrix(matrix);
+                printMatrixChar(matrix);
                 boardLists.remove(i);
                 System.out.println("Lista despues de rellenar matriz:" + boardLists);
                 break;
@@ -58,58 +63,151 @@ public class Board {
         while (this.juegoActual < this.juegosTotales) {
             System.out.println("Juego " + (juegoActual + 1) + ":");
             gameBoard = getGameBoard();
+            pieceGameBoard = getGameBoardWithPieces(gameBoard);
 
-            findSolutions4Board(gameBoard);
+            System.out.println("Matriz de piezas:");
+            printMatrixPiece(pieceGameBoard);
+
+            // findSolutions4Board(gameBoard);
+            // printSolutionsList();
             this.juegoActual++;
         }
 
     }
 
-    private void findSolutions4Board(char[][] matrixBoard) {
+    private Piece[][] getGameBoardWithPieces(char[][] gameBoard2) {
+        Piece[][] aux = new Piece[gameBoard2.length][gameBoard2[0].length];
 
-        // for (int i = matrixBoard.length - 1; i >= 0; i--) {
-        // for (int j = matrixBoard[0].length - 1; j >= 0; j--) {
-        // if (matrixBoard[i][j] != '.') { // Ignorar fichas vacías
-        // char[][] copyBoard = matrixCopy(matrixBoard);
-        // int eliminated = eliminateGroup(matrixBoard, i, j);
-        // if (eliminated >= 2) {
-        // int score = (int) Math.pow(eliminated - 2, 2);
-        // solutions.add(score);
-        // System.out.println("Movimiento " + (solutions.size()) + " en (" + (i + 1) +
-        // ", " + (j + 1) +
-        // "): eliminó " + eliminated + " fichas de color " + matrixBoard[i][j] +
-        // " y obtuvo " + score + " puntos.");
-        // }
-        // printMatrix(matrixBoard);
-        // System.out.println("Puntuación final: " + calculateTotalScore() + ", quedando
-        // " +
-        // countRemainingPieces(matrixBoard) + " fichas.");
-        // matrixBoard = matrixCopy(copyBoard);
-        // }
-        // }
-        // }
+        for (int i = 0; i < gameBoard2.length; i++) {
+            for (int j = 0; j < gameBoard2[0].length; j++) {
+                char color = gameBoard2[i][j];
 
-        // if (!notMovementsAvailable()) {
-        //     return;
-        // }
+                aux[i][j] = new Piece(color);
+            }
+        }
 
-        for (int i = 0; i < matrixBoard.length; i++) {
-            for (int j = 0; j < matrixBoard[0].length; j++) {
-                if (isValidMove(matrixBoard, i, j)) {
-                    char[][] copyBoard = matrixCopy(matrixBoard);
+        return aux;
+    }
 
-                    // Hacemos el movimiento
-                    // Move columns & rows
-                    // makemove(board)
+    private int getLeftPieces() {
+        int piecesLeft = 0;
 
-                    findSolutions4Board(matrixBoard);
-
-                    matrixBoard = matrixCopy(copyBoard);
-
+        for (int i = 0; i < pieceGameBoard.length; i++) {
+            for (int j = 0; j < pieceGameBoard[0].length; j++) {
+                if (getPosPiece(i, j).getColorP() != '-') {
+                    piecesLeft++;
                 }
             }
         }
 
+        return piecesLeft;
+    }
+
+    private int removeGroup(int numGroup) {
+        int piecesDeleted = 0;
+
+        if (getGroupSize(numGroup) > 1) {
+
+            for (int i = 0; i < pieceGameBoard.length; i++) {
+                for (int j = 0; j < pieceGameBoard[0].length; j++) {
+                    if (numGroup == getPosPiece(i, j).getGroupNumP()) {
+                        piecesDeleted++;
+                        getPosPiece(i, j).setGroupNumP(0);
+                        setPosPiece(i, j, '-');
+                    }
+                }
+            }
+
+        }
+
+        return piecesDeleted;
+    }
+
+    private int getBiggerGroup() {
+        int biggerGroup = 0;
+
+        for (int i = 0; i < pieceGameBoard.length; i++) {
+            for (int j = 0; j < pieceGameBoard[0].length; j++) {
+                int actualGroup = getPosPiece(i, j).getGroupNumP();
+                if (actualGroup > biggerGroup) {
+                    biggerGroup = actualGroup;
+                }
+            }
+        }
+
+        return biggerGroup;
+    }
+
+    private int getGroupSizeByPos(int i, int j) {
+        return getGroupSize(getPosPiece(i, j).getGroupNumP());
+    }
+
+    private int getGroupSize(int numGroup) {
+        int size = 0;
+
+        for (int i = 0; i < pieceGameBoard.length; i++) {
+            for (int j = 0; j < pieceGameBoard[0].length; j++) {
+                Piece actualPiece = getPosPiece(i, j);
+                if (actualPiece.getGroupNumP() == numGroup) {
+                    size++;
+                }
+            }
+        }
+
+        return size;
+    }
+
+    private Piece getPosPiece(int i, int j) {
+
+        if (i < 0 || i > pieceGameBoard.length) {
+            return null;
+        } else if (j < 0 || j > pieceGameBoard[0].length) {
+            return null;
+        } else {
+
+            return pieceGameBoard[i][j];
+        }
+
+    }
+
+    private void setPosPiece(int i, int j, char color) {
+        if (i < 0 || i > pieceGameBoard.length) {
+            return;
+        } else if (j < 0 || j > pieceGameBoard[0].length) {
+            return;
+        } else {
+
+            pieceGameBoard[i][j].setColorP(color);
+        }
+    }
+
+    private void printSolutionsList() {
+        int i = 0;
+        while (solutions.size() > 0) {
+            System.out.println("Puntuacion final: " + solutions.get(i) + "quedando ");
+        }
+    }
+
+    private void findSolutions4Board(char[][] matrixBoard) {
+
+        for (int i = 0; i < matrixBoard.length; i++) {
+            for (int j = 0; j < matrixBoard[0].length; j++) {
+                if (movementsAvailable()) {
+                    if (isValidMove(matrixBoard, i, j)) {
+                        char[][] copyBoard = matrixCopy(matrixBoard);
+
+                        // Hacemos el movimiento
+                        // Move columns & rows
+                        // makemove(board)
+
+                        findSolutions4Board(matrixBoard);
+
+                        matrixBoard = matrixCopy(copyBoard);
+
+                    }
+                }
+            }
+        }
 
     }
 
@@ -130,7 +228,6 @@ public class Board {
         return false;
     }
 
-
     private int checkConnection(char[][] matrixBoard, int x, int y, int dx, int dy, char color) {
 
         int count = 0;
@@ -144,9 +241,70 @@ public class Board {
         return count;
     }
 
-    private boolean notMovementsAvailable() {
+    private boolean movementsAvailable() {
+        if (this.numMovs > 0) {
+            return true;
+        }
         return false;
     }
+
+    private void printMatrixPiece(Piece[][] pieceGameBoard) {
+        for (int i = 0; i < pieceGameBoard.length; i++) {
+            for (int j = 0; j < pieceGameBoard[0].length; j++) {
+                System.out.print(pieceGameBoard[i][j].getColorP());
+            }
+            System.out.println();
+        }
+    }
+
+    private void printMatrixChar(char[][] matrix) {
+        for (int i = 0; i < matrix.length; i++) {
+            for (int j = 0; j < matrix[0].length; j++) {
+                System.out.print(matrix[i][j]);
+            }
+            System.out.println();
+        }
+    }
+
+    private char[][] matrixCopy(char[][] matrixOriginal) {
+        char[][] matrixCopy = new char[matrixOriginal.length][matrixOriginal[0].length];
+
+        for (int i = 0; i < matrixOriginal.length; i++) {
+            for (int j = 0; j < matrixOriginal[0].length; j++) {
+                matrixCopy[i][j] = matrixOriginal[i][j];
+            }
+        }
+
+        return matrixCopy;
+    }
+
+    // private void findSolutions4Board(char[][] matrixBoard) {
+
+    // for (int i = matrixBoard.length - 1; i >= 0; i--) {
+    // for (int j = matrixBoard[0].length - 1; j >= 0; j--) {
+    // if (matrixBoard[i][j] != '.') { // Ignorar fichas vacías
+    // char[][] copyBoard = matrixCopy(matrixBoard);
+    // int eliminated = eliminateGroup(matrixBoard, i, j);
+    // if (eliminated >= 2) {
+    // int score = (int) Math.pow(eliminated - 2, 2);
+    // solutions.add(score);
+    // System.out.println("Movimiento " + (solutions.size()) + " en (" + (i + 1) +
+    // ", " + (j + 1) +
+    // "): eliminó " + eliminated + " fichas de color " + matrixBoard[i][j] +
+    // " y obtuvo " + score + " puntos.");
+    // }
+    // printMatrix(matrixBoard);
+    // System.out.println("Puntuación final: " + calculateTotalScore() + ", quedando
+    // " +
+    // countRemainingPieces(matrixBoard) + " fichas.");
+    // matrixBoard = matrixCopy(copyBoard);
+    // }
+    // }
+    // }
+
+    // if (!notMovementsAvailable()) {
+    // return;
+    // }
 
     // private int eliminateGroup(char[][] matrixBoard, int row, int col) {
     // char color = matrixBoard[row][col];
@@ -195,77 +353,4 @@ public class Board {
     // return count;
     // }
 
-    private void printMatrix(char[][] matrix) {
-        for (int i = 0; i < matrix.length; i++) {
-            for (int j = 0; j < matrix[0].length; j++) {
-                System.out.print(matrix[i][j]);
-            }
-            System.out.println();
-        }
-    }
-
-    private char[][] matrixCopy(char[][] matrixOriginal) {
-        char[][] matrixCopy = new char[matrixOriginal.length][matrixOriginal[0].length];
-
-        for (int i = 0; i < matrixOriginal.length; i++) {
-            for (int j = 0; j < matrixOriginal[0].length; j++) {
-                matrixCopy[i][j] = matrixOriginal[i][j];
-            }
-        }
-
-        return matrixCopy;
-    }
-
-    private List<Movements> getMovements(char[][] matrixBoard) {
-        List<Movements> movements = new ArrayList<>();
-
-        for (int i = matrixBoard.length - 1; i >= 0; i--) {
-            for (int j = 0; j < matrixBoard[0].length; j++) {
-                if (isValidMove(matrixBoard, i, j)) {
-                    int startRow = findStartRow(matrixBoard, i, j);
-                    movements.add(new Movements(startRow, j, i, j));
-                }
-            }
-        }
-
-        return movements;
-    }
-
-    private int findStartRow(char[][] matrixBoard, int row, int col) {
-        int startRow = row;
-        while (startRow > 0 && matrixBoard[startRow - 1][col] == matrixBoard[row][col]) {
-            startRow--;
-        }
-        return startRow;
-    }
-
-    private class Movements {
-        private final int startRow;
-        private final int startCol;
-        private final int endRow;
-        private final int endCol;
-
-        public Movements(int startRow, int startCol, int endRow, int endCol) {
-            this.startRow = startRow;
-            this.startCol = startCol;
-            this.endRow = endRow;
-            this.endCol = endCol;
-        }
-
-        public int getStartRow() {
-            return startRow;
-        }
-
-        public int getStartCol() {
-            return startCol;
-        }
-
-        public int getEndRow() {
-            return endRow;
-        }
-
-        public int getEndCol() {
-            return endCol;
-        }
-    }
 }

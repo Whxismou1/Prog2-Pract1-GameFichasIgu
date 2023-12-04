@@ -12,7 +12,6 @@ public class Coordinator {
     private int numJuegos;
     private int numTablerosPasados;
     private boolean[] notValid;
-    private Board board;
 
     public void start() {
         numJuegos = getNumJuegos();
@@ -142,7 +141,6 @@ public class Coordinator {
         }
 
         System.out.println(Arrays.toString(notValid));
-
 
     }
 
