@@ -1,13 +1,15 @@
 package prg2.gamefichas;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
 public class Coordinator {
+    private final int MINIMUM_ROWS = 1;
+    private final int MAXIMUM_COLS = 20;
     List<List<String>> inputList = new ArrayList<>();
     List<List<String>> validList = new ArrayList<>();
+    List<List<String>> validDefinitiveList = new ArrayList<>();
     private Scanner sc = new Scanner(System.in);
     private int numJuegos;
     private int numTablerosPasados;
@@ -17,28 +19,43 @@ public class Coordinator {
         numJuegos = getNumJuegos();
         getEntrada();
         numTablerosPasados = countNumTablerosPasados();
-        System.out.println("Numero de juegos pasados: " + numJuegos);
-        System.out.println("Numero tableros pasado: " + numTablerosPasados);
-        System.out.println("Lista pasada por parametro: " + inputList);
 
         checkEntrada(numJuegos, numTablerosPasados);
 
-        System.out.println("Lista sin tableros malos(RVA bien falta columnas y filas)" + validList);
-
         checkEntradaSameFilsAndCols();
-        System.out.println("Lista sin tableros malos" + validList);
 
         int juegosReales = validList.size();
 
-        new Board(juegosReales, validList);
+        checkLimitRowsAndCols();
 
+        new Board(juegosReales, validDefinitiveList);
+
+    }
+
+    private void checkLimitRowsAndCols() {
+        // System.out.println(validDefinitiveList);
+        // System.out.println(validList);
+        // System.out.println(validList.get(0));
+        // System.out.println(validList.get(0).size());
+        // System.out.println(validList.get(0).get(0));
+        // System.out.println(validList.get(0).get(0).length());
+        for (int i = 0; i < validList.size(); i++) {
+            List<String> actualList = validList.get(i);
+
+            int nRows = actualList.size();
+            int nCols = actualList.get(0).length();
+
+            if (nRows >= MINIMUM_ROWS && nCols <= MAXIMUM_COLS) {
+                validDefinitiveList.add(actualList);
+            }
+
+        }
     }
 
     private void checkEntradaSameFilsAndCols() {
 
         if (validList.size() > 0) {
-            // System.out.println(validList.get(0));
-            // System.out.println(validList.get(0).get(0));
+
             for (int i = 0; i < validList.size(); i++) {
 
                 if (checkRow(validList.get(i)) != true) {
@@ -47,7 +64,7 @@ public class Coordinator {
 
             }
         } else {
-            System.out.println("ERROR: no hay tableros validos en la lista despues de comrpobar filas y columnas");
+
             exitGame(1);
         }
 
@@ -103,28 +120,6 @@ public class Coordinator {
     private void isValid(int param) {
         notValid = new boolean[param];
 
-        // for (int i = 0; i < notValid.length; i++) {
-        // String a = inputList.get(i);
-        // for (int j = 0; j < inputList.get(i).size(); j++) { // Corregir aquí
-        // if (inputList.get(i).get(j).charAt(0) != 'R' &&
-        // inputList.get(i).get(j).charAt(0) != 'V' &&
-        // inputList.get(i).get(j).charAt(0) != 'A') {
-        // notValid[i] = true;
-        // }
-        // }
-        // }
-        // int indexExterior = 0, j=0, k=0;
-        // while (indexExterior < notValid.length) {
-        // List<String> currentTableroARevisar = inputList.get(indexExterior);
-
-        // for (int i = 0; i < currentTableroARevisar.size(); i++) {
-
-        // }
-
-        // indexExterior++;
-        // }
-        notValid = new boolean[param];
-
         for (int i = 0; i < notValid.length; i++) {
             for (int j = 0; j < inputList.get(i).size(); j++) {
                 String actualRow = inputList.get(i).get(j);
@@ -139,8 +134,6 @@ public class Coordinator {
                 }
             }
         }
-
-        System.out.println(Arrays.toString(notValid));
 
     }
 
@@ -181,12 +174,12 @@ public class Coordinator {
             sc.nextLine();
 
         } else {
-            System.out.println("ERROR: numjuegos no valido");
+
             exitGame(1);
         }
 
         if (numJuegos <= 0) {
-            System.out.println("ERROR: numjuegos 0 o menor");
+
             exitGame(2);
         }
 
@@ -194,11 +187,6 @@ public class Coordinator {
     }
 
     private void exitGame(int statusCode) {
-        if (statusCode == 0) {
-            System.out.println("Exit successfully");
-        } else {
-            System.out.println("Error en el programa");
-        }
         System.exit(statusCode);
     }
 

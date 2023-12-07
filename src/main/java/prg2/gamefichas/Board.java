@@ -1,28 +1,49 @@
 package prg2.gamefichas;
 
+/**
+ * @author Mouhcine El Oualidi 
+ * Clase encargada de jugar
+ */
+
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class Board {
-    int juegosTotales;
-    int juegoActual;
-    List<List<String>> boardLists;
-    List<Integer> solutions;
-    private char[][] gameBoard;
-    private int[] fichasLeftGame;
-    private Piece[][] pieceGameBoard;
-    private int numMovs;
+    // Numero de juegos que se va a jugar
+    int totalGames;
+    // Juego actual
+    int actualGame;
+    private int bestScore;
+    private List<int[]> actualSolutions;
+    private List<int[]> bestSolutions;
 
-    Board(int juegosReales, List<List<String>> validList) {
-        this.juegosTotales = juegosReales;
+    // Lista donde se obtienen los tableros correctos
+    List<List<String>> boardLists;
+
+    // Matriz donde se guarda el tablero de chars
+    private char[][] gameBoard;
+
+    // Matriz donde se guarda el tablero de Pieces
+    // private Piece[][] pieceGameBoard;
+
+    private boolean isLastGame;
+
+    Board(int realGames, List<List<String>> validList) {
+        this.totalGames = realGames;
         this.boardLists = validList;
-        this.juegoActual = 0;
-        this.solutions = new ArrayList<>();
+        this.actualGame = 1;
+
+        this.actualSolutions = new ArrayList<>();
+        this.bestSolutions = new ArrayList<>();
+        this.bestScore = 0;
         play();
     }
 
+    /***
+     * Metodo encargado de obtener de la lista los tableros
+     * 
+     * @return matrix: Devuelve la matriz de juego actual
+     */
     private char[][] getGameBoard() {
 
         if (this.boardLists.isEmpty()) {
@@ -35,11 +56,9 @@ public class Board {
                 row = this.boardLists.get(i).size();
                 col = this.boardLists.get(i).get(0).length();
                 matrix = new char[row][col];
-                rellenarMatriz(matrix, boardLists.get(i), i);
-                System.out.println("Matriz qeuda");
-                printMatrixChar(matrix);
+                fillMatrix(matrix, boardLists.get(i), i);
                 boardLists.remove(i);
-                System.out.println("Lista despues de rellenar matriz:" + boardLists);
+
                 break;
 
             }
@@ -49,7 +68,14 @@ public class Board {
 
     }
 
-    private void rellenarMatriz(char[][] matrix, List<String> list, int indexActualList) {
+    /**
+     * Metodo auxiliar que nos rellena la matriz
+     * 
+     * @param matrix
+     * @param list
+     * @param indexActualList
+     */
+    private void fillMatrix(char[][] matrix, List<String> list, int indexActualList) {
         for (int i = 0; i < list.size(); i++) {
             String linea = list.get(i);
             for (int j = 0; j < linea.length(); j++) {
@@ -58,43 +84,226 @@ public class Board {
         }
     }
 
+    /***
+     * Metodo principal del juego
+     */
     private void play() {
 
-        while (this.juegoActual < this.juegosTotales) {
-            System.out.println("Juego " + (juegoActual + 1) + ":");
-            gameBoard = getGameBoard();
-            pieceGameBoard = getGameBoardWithPieces(gameBoard);
+        while (this.actualGame <= this.totalGames) {
+            // Se obtiene el tablero de chars
+            // System.out.println("Lista antes de sacaer:" + boardLists);
+            this.gameBoard = getGameBoard();
+            // System.out.println("Matriz");
 
-            System.out.println("Matriz de piezas:");
-            printMatrixPiece(pieceGameBoard);
+            // for (int i = 0; i < getTotalRows(gameBoard); i++) {
+            // for (int j = 0; j < getTotalCols(gameBoard); j++) {
+            // System.out.print(gameBoard[i][j]);
+            // }
+            // System.out.println();
+            // }
 
-            // findSolutions4Board(gameBoard);
-            // printSolutionsList();
-            this.juegoActual++;
+            // System.out.println("Lista despues de sacaer:" + boardLists);
+            // Se agrupa
+            // regroupPieces();
+
+            // Metodo que calcula las soluciones
+            List<int[]> posibleMoves = new ArrayList<>();
+            checkMoves(gameBoard, posibleMoves);
+
+            findSolutions4Board(this.gameBoard, posibleMoves);
+
+            // Se imprimen los mejores movimientos y puntuaciones
+            int aux = this.actualGame;
+            if (totalGames < aux + 1) {
+                this.isLastGame = true;
+            } else {
+                this.isLastGame = false;
+            }
+
+            printActualGameSolution(actualGame, gameBoard);
+            gameBoard = null;
+            bestScore = 0;
+            actualSolutions.clear();
+
+            bestSolutions.clear();
+
+            // se incrementa el juego
+            this.actualGame++;
         }
 
     }
 
-    private Piece[][] getGameBoardWithPieces(char[][] gameBoard2) {
-        Piece[][] aux = new Piece[gameBoard2.length][gameBoard2[0].length];
+    private void printActualGameSolution(int actualGame, char[][] boardGameP) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Juego " + actualGame + ":" + "\n");
 
-        for (int i = 0; i < gameBoard2.length; i++) {
-            for (int j = 0; j < gameBoard2[0].length; j++) {
-                char color = gameBoard2[i][j];
+        int finalScore = 0;
+        for (int i = 0; i < this.bestSolutions.size(); i++) {
+            int[] arrSolutions = this.bestSolutions.get(i);
 
-                aux[i][j] = new Piece(color);
+            int movesScore = getPointWithDeletedPieces(boardGameP, arrSolutions[2]);
+
+            finalScore += movesScore;
+
+            int row = arrSolutions[0];
+            int col = arrSolutions[1];
+
+            removeGroup(boardGameP, row, col);
+            if (movesScore == 1) {
+                sb.append("Movimiento ").append(i + 1).append(" en (")
+                        .append(getTotalRows(boardGameP) - arrSolutions[0])
+                        .append(", ")
+                        .append(arrSolutions[1] + 1).append("): eliminó ").append(arrSolutions[2])
+                        .append(" fichas de color ")
+                        .append((char) arrSolutions[3]).append(" y obtuvo ").append(movesScore)
+                        .append(" punto.\n");
+            } else {
+                sb.append("Movimiento ").append(i + 1).append(" en (")
+                        .append(getTotalRows(boardGameP) - arrSolutions[0])
+                        .append(", ")
+                        .append(arrSolutions[1] + 1).append("): eliminó ").append(arrSolutions[2])
+                        .append(" fichas de color ")
+                        .append((char) arrSolutions[3]).append(" y obtuvo ").append(movesScore)
+                        .append(" puntos.\n");
+            }
+
+        }
+
+        finalScore += (getLeftPieces(boardGameP) == 0) ? 1000 : 0;
+
+        if (getLeftPieces(boardGameP) == 1) {
+            sb.append("Puntuación final: ").append(finalScore).append(", quedando ")
+                    .append(getLeftPieces(boardGameP))
+                    .append(" ficha.");
+        } else {
+            sb.append("Puntuación final: ").append(finalScore).append(", quedando ")
+                    .append(getLeftPieces(boardGameP))
+                    .append(" fichas.");
+        }
+        if (!isLastGame) {
+            sb.append("\n");
+        }
+        System.out.println(sb);
+    }
+
+    private void checkMoves(char[][] boardGameP, List<int[]> posibleMoves) {
+        boolean visited[][] = new boolean[getTotalRows(boardGameP)][getTotalCols(boardGameP)];
+
+        for (int row = getTotalRows(boardGameP) - 1; row >= 0; row--) {
+            for (int col = 0; col < getTotalCols(boardGameP); col++) {
+                if (!visited[row][col] && isGroupByPos(row, col, boardGameP, boardGameP[row][col])
+                        && boardGameP[row][col] != '-') {
+                    posibleMoves.add(new int[] { row, col });
+                    checkMovesWithRec(boardGameP, row, col, boardGameP[row][col], visited);
+                }
             }
         }
 
-        return aux;
     }
 
-    private int getLeftPieces() {
+    private boolean isGroupByPos(int row, int col, char[][] boardGameP, char actualColor) {
+        return isGroupByPosWithRec(boardGameP, row - 1, col, actualColor) ||
+                isGroupByPosWithRec(boardGameP, row + 1, col, actualColor) ||
+                isGroupByPosWithRec(boardGameP, row, col - 1, actualColor) ||
+                isGroupByPosWithRec(boardGameP, row, col + 1, actualColor);
+    }
+
+    private static boolean isGroupByPosWithRec(char[][] boardGameP, int row, int col, char actualColor) {
+        return row >= 0 && row < boardGameP.length &&
+                col >= 0 && col < boardGameP[0].length &&
+                boardGameP[row][col] == actualColor;
+    }
+
+    private void checkMovesWithRec(char[][] boardGameP, int row, int col, char actualPiece,
+            boolean[][] visited) {
+
+        if (row < 0 || row >= getTotalRows(boardGameP) || col < 0 || col >= getTotalCols(boardGameP)
+                || visited[row][col]
+                || boardGameP[row][col] != actualPiece) {
+            return;
+        }
+
+        visited[row][col] = true;
+
+        checkMovesWithRec(boardGameP, row - 1, col, actualPiece, visited); // Check UP
+        checkMovesWithRec(boardGameP, row + 1, col, actualPiece, visited); // check down
+        checkMovesWithRec(boardGameP, row, col - 1, actualPiece, visited); // check left
+        checkMovesWithRec(boardGameP, row, col + 1, actualPiece, visited); // check right
+
+    }
+
+    private void findSolutions4Board(char[][] boardGameP, List<int[]> posibleMoves) {
+
+        char[][] copyBoardGame = matrixCopy(boardGameP);
+
+        for (int i = 0; i < posibleMoves.size(); i++) {
+            int[] actualMove = posibleMoves.get(i);
+
+            int row = actualMove[0];
+            int col = actualMove[1];
+
+            char actualColor = copyBoardGame[row][col];
+
+            int deletedPieces = removeGroup(copyBoardGame, row, col);
+
+            this.actualSolutions.add(new int[] { row, col, deletedPieces, actualColor });
+
+            List<int[]> nextMovesList = new ArrayList<>();
+            checkMoves(copyBoardGame, nextMovesList);
+            findSolutions4Board(copyBoardGame, nextMovesList);
+            copyBoardGame = matrixCopy(boardGameP);
+            this.actualSolutions.remove(this.actualSolutions.size() - 1);
+        }
+
+        if (posibleMoves.size() == 0) {
+            if (bestSolutions.size() == 0) {
+                bestSolutions.addAll(actualSolutions);
+            }
+
+            checkSolutions(copyBoardGame);
+        }
+
+    }
+
+    private void checkSolutions(char[][] boardGameP) {
+        int finalScore = getTotalMoveScore(boardGameP);
+
+        if (this.bestScore < finalScore) {
+            this.bestScore = finalScore;
+            this.bestSolutions.clear();
+            this.bestSolutions.addAll(this.actualSolutions);
+        }
+
+    }
+
+    private int getTotalMoveScore(char[][] boardGameP) {
+        int finalMoveScore = 0;
+
+        for (int i = 0; i < this.actualSolutions.size(); i++) {
+            int[] matrixSol = this.actualSolutions.get(i);
+            int numPointsMv = getPointWithDeletedPieces(boardGameP, matrixSol[2]);
+            finalMoveScore += numPointsMv;
+        }
+
+        finalMoveScore += (getLeftPieces(boardGameP) == 0) ? 1000 : 0;
+
+        return finalMoveScore;
+    }
+
+    private int getPointWithDeletedPieces(char[][] boardGameP, int deletedPieces) {
+        return (deletedPieces - 2) * (deletedPieces - 2);
+    }
+
+    /***
+     * Metodo que devuelve el numero de piezas restante
+     * 
+     */
+    private int getLeftPieces(char[][] boardGameP) {
         int piecesLeft = 0;
 
-        for (int i = 0; i < pieceGameBoard.length; i++) {
-            for (int j = 0; j < pieceGameBoard[0].length; j++) {
-                if (getPosPiece(i, j).getColorP() != '-') {
+        for (int row = 0; row < getTotalRows(boardGameP); row++) {
+            for (int col = 0; col < getTotalCols(boardGameP); col++) {
+                if (boardGameP[row][col] != '-') {
                     piecesLeft++;
                 }
             }
@@ -103,254 +312,100 @@ public class Board {
         return piecesLeft;
     }
 
-    private int removeGroup(int numGroup) {
-        int piecesDeleted = 0;
+    /***
+     * Metodo encargado de eliminar el grupo
+     * 
+     * @param col
+     * @param intento
+     */
+    private int removeGroup(char[][] boardGameP, int row, int col) {
+        char actualColor = boardGameP[row][col];
 
-        if (getGroupSize(numGroup) > 1) {
+        boolean[][] visited = new boolean[getTotalRows(boardGameP)][getTotalCols(boardGameP)];
 
-            for (int i = 0; i < pieceGameBoard.length; i++) {
-                for (int j = 0; j < pieceGameBoard[0].length; j++) {
-                    if (numGroup == getPosPiece(i, j).getGroupNumP()) {
-                        piecesDeleted++;
-                        getPosPiece(i, j).setGroupNumP(0);
-                        setPosPiece(i, j, '-');
-                    }
+        return removeGroupRec(boardGameP, row, col, actualColor, visited);
+
+    }
+
+    private int removeGroupRec(char[][] boardGameP, int row, int col, char color, boolean[][] visited) {
+        if (row < 0 || row >= boardGameP.length || col < 0 || col >= boardGameP[0].length || visited[row][col]
+                || boardGameP[row][col] != color) {
+            return 0;
+        }
+
+        visited[row][col] = true;
+
+        int numPiecesRem = removeGroupRec(boardGameP, row - 1, col, color, visited); // Check Up
+        numPiecesRem += removeGroupRec(boardGameP, row + 1, col, color, visited); // Check DOnw
+        numPiecesRem += removeGroupRec(boardGameP, row, col - 1, color, visited); // Check Left
+        numPiecesRem += removeGroupRec(boardGameP, row, col + 1, color, visited); // CheckRigth
+
+        boardGameP[row][col] = '-';
+        getPiecesDown(boardGameP);
+        movePiecesCol(boardGameP);
+
+        return numPiecesRem + 1;
+
+    }
+
+    private void getPiecesDown(char[][] boardGameP) {
+        for (int row = 0; row < getTotalRows(boardGameP) - 1; row++) {
+            for (int col = 0; col < getTotalCols(boardGameP); col++) {
+                if (boardGameP[row + 1][col] == '-' && boardGameP[row][col] != '-') {
+                    boardGameP[row + 1][col] = boardGameP[row][col];
+                    boardGameP[row][col] = '-';
+                    getPiecesDown(boardGameP);
+                }
+
+            }
+        }
+
+    }
+
+    private void movePiecesCol(char[][] boardGameP) {
+        for (int row = 0; row < getTotalCols(boardGameP); row++) {
+            int numEmptyPieces = 0;
+            for (int col = 0; col < getTotalRows(boardGameP); col++) {
+                if (boardGameP[col][row] == '-') {
+                    numEmptyPieces++;
                 }
             }
-
-        }
-
-        return piecesDeleted;
-    }
-
-    private int getBiggerGroup() {
-        int biggerGroup = 0;
-
-        for (int i = 0; i < pieceGameBoard.length; i++) {
-            for (int j = 0; j < pieceGameBoard[0].length; j++) {
-                int actualGroup = getPosPiece(i, j).getGroupNumP();
-                if (actualGroup > biggerGroup) {
-                    biggerGroup = actualGroup;
-                }
-            }
-        }
-
-        return biggerGroup;
-    }
-
-    private int getGroupSizeByPos(int i, int j) {
-        return getGroupSize(getPosPiece(i, j).getGroupNumP());
-    }
-
-    private int getGroupSize(int numGroup) {
-        int size = 0;
-
-        for (int i = 0; i < pieceGameBoard.length; i++) {
-            for (int j = 0; j < pieceGameBoard[0].length; j++) {
-                Piece actualPiece = getPosPiece(i, j);
-                if (actualPiece.getGroupNumP() == numGroup) {
-                    size++;
-                }
-            }
-        }
-
-        return size;
-    }
-
-    private Piece getPosPiece(int i, int j) {
-
-        if (i < 0 || i > pieceGameBoard.length) {
-            return null;
-        } else if (j < 0 || j > pieceGameBoard[0].length) {
-            return null;
-        } else {
-
-            return pieceGameBoard[i][j];
-        }
-
-    }
-
-    private void setPosPiece(int i, int j, char color) {
-        if (i < 0 || i > pieceGameBoard.length) {
-            return;
-        } else if (j < 0 || j > pieceGameBoard[0].length) {
-            return;
-        } else {
-
-            pieceGameBoard[i][j].setColorP(color);
-        }
-    }
-
-    private void printSolutionsList() {
-        int i = 0;
-        while (solutions.size() > 0) {
-            System.out.println("Puntuacion final: " + solutions.get(i) + "quedando ");
-        }
-    }
-
-    private void findSolutions4Board(char[][] matrixBoard) {
-
-        for (int i = 0; i < matrixBoard.length; i++) {
-            for (int j = 0; j < matrixBoard[0].length; j++) {
-                if (movementsAvailable()) {
-                    if (isValidMove(matrixBoard, i, j)) {
-                        char[][] copyBoard = matrixCopy(matrixBoard);
-
-                        // Hacemos el movimiento
-                        // Move columns & rows
-                        // makemove(board)
-
-                        findSolutions4Board(matrixBoard);
-
-                        matrixBoard = matrixCopy(copyBoard);
-
-                    }
-                }
+            if (numEmptyPieces == getTotalCols(boardGameP)) {
+                changeCols(boardGameP, numEmptyPieces);
             }
         }
 
     }
 
-    private boolean isValidMove(char[][] matrixBoard, int i, int j) {
-
-        char color = matrixBoard[i][j];
-
-        // Verificamos filas
-        if (checkConnection(matrixBoard, i, j, 0, 1, color) + checkConnection(matrixBoard, i, j, 0, -1, color) >= 2) {
-            return true;
-        }
-
-        // Verificamos columnas
-        if (checkConnection(matrixBoard, i, j, 1, 0, color) + checkConnection(matrixBoard, i, j, -1, 0, color) >= 2) {
-            return true;
-        }
-
-        return false;
-    }
-
-    private int checkConnection(char[][] matrixBoard, int x, int y, int dx, int dy, char color) {
-
-        int count = 0;
-
-        while (x >= 0 && x < matrixBoard.length && y >= 0 && y < matrixBoard[0].length && matrixBoard[x][y] == color) {
-            count++;
-            x += dx;
-            y += dy;
-        }
-
-        return count;
-    }
-
-    private boolean movementsAvailable() {
-        if (this.numMovs > 0) {
-            return true;
-        }
-        return false;
-    }
-
-    private void printMatrixPiece(Piece[][] pieceGameBoard) {
-        for (int i = 0; i < pieceGameBoard.length; i++) {
-            for (int j = 0; j < pieceGameBoard[0].length; j++) {
-                System.out.print(pieceGameBoard[i][j].getColorP());
+    private void changeCols(char[][] boardGameP, int numEmptyPieces) {
+        for (int colLast = numEmptyPieces; colLast < getTotalCols(boardGameP) - 1; colLast++) {
+            for (int colFirst = 0; colFirst < getTotalRows(boardGameP) - 1; colFirst++) {
+                boardGameP[colFirst][colLast] = boardGameP[colFirst][colLast + 1];
+                boardGameP[colFirst][colLast + 1] = '-';
             }
-            System.out.println();
         }
     }
 
-    private void printMatrixChar(char[][] matrix) {
-        for (int i = 0; i < matrix.length; i++) {
-            for (int j = 0; j < matrix[0].length; j++) {
-                System.out.print(matrix[i][j]);
-            }
-            System.out.println();
-        }
+    private int getTotalCols(char[][] matrix) {
+        return matrix[0].length;
     }
 
-    private char[][] matrixCopy(char[][] matrixOriginal) {
-        char[][] matrixCopy = new char[matrixOriginal.length][matrixOriginal[0].length];
+    private int getTotalRows(char[][] matrix) {
+        return matrix.length;
+    }
 
-        for (int i = 0; i < matrixOriginal.length; i++) {
-            for (int j = 0; j < matrixOriginal[0].length; j++) {
-                matrixCopy[i][j] = matrixOriginal[i][j];
+    private char[][] matrixCopy(char[][] originalMatrix) {
+
+        char[][] copiedMatrix = new char[getTotalRows(originalMatrix)][getTotalCols(originalMatrix)];
+
+        for (int row = 0; row < getTotalRows(originalMatrix); row++) {
+            for (int col = 0; col < getTotalCols(originalMatrix); col++) {
+                copiedMatrix[row][col] = originalMatrix[row][col];
             }
         }
 
-        return matrixCopy;
+        return copiedMatrix;
+
     }
-
-    // private void findSolutions4Board(char[][] matrixBoard) {
-
-    // for (int i = matrixBoard.length - 1; i >= 0; i--) {
-    // for (int j = matrixBoard[0].length - 1; j >= 0; j--) {
-    // if (matrixBoard[i][j] != '.') { // Ignorar fichas vacías
-    // char[][] copyBoard = matrixCopy(matrixBoard);
-    // int eliminated = eliminateGroup(matrixBoard, i, j);
-    // if (eliminated >= 2) {
-    // int score = (int) Math.pow(eliminated - 2, 2);
-    // solutions.add(score);
-    // System.out.println("Movimiento " + (solutions.size()) + " en (" + (i + 1) +
-    // ", " + (j + 1) +
-    // "): eliminó " + eliminated + " fichas de color " + matrixBoard[i][j] +
-    // " y obtuvo " + score + " puntos.");
-    // }
-    // printMatrix(matrixBoard);
-    // System.out.println("Puntuación final: " + calculateTotalScore() + ", quedando
-    // " +
-    // countRemainingPieces(matrixBoard) + " fichas.");
-    // matrixBoard = matrixCopy(copyBoard);
-    // }
-    // }
-    // }
-
-    // if (!notMovementsAvailable()) {
-    // return;
-    // }
-
-    // private int eliminateGroup(char[][] matrixBoard, int row, int col) {
-    // char color = matrixBoard[row][col];
-    // int eliminated = 0;
-    // if (color != '.') {
-    // eliminated = dfs(matrixBoard, row, col, color);
-    // for (int i = matrixBoard.length - 1; i >= 0; i--) {
-    // for (int j = matrixBoard[0].length - 1; j >= 0; j--) {
-    // if (matrixBoard[i][j] == 'X') {
-    // matrixBoard[i][j] = '.'; // Mover la eliminación aquí
-    // }
-    // }
-    // }
-    // }
-    // return eliminated;
-    // }
-
-    // private int dfs(char[][] matrixBoard, int row, int col, char color) {
-    // if (row < 0 || col < 0 || row >= matrixBoard.length || col >=
-    // matrixBoard[0].length ||
-    // matrixBoard[row][col] != color) {
-    // return 0;
-    // }
-    // matrixBoard[row][col] = 'X'; // Mark as eliminated
-    // int count = 1;
-    // count += dfs(matrixBoard, row + 1, col, color);
-    // count += dfs(matrixBoard, row - 1, col, color);
-    // count += dfs(matrixBoard, row, col + 1, color);
-    // count += dfs(matrixBoard, row, col - 1, color);
-    // return count;
-    // }
-
-    // private int calculateTotalScore() {
-    // return solutions.stream().mapToInt(Integer::intValue).sum() + 1000;
-    // }
-
-    // private int countRemainingPieces(char[][] matrixBoard) {
-    // int count = 0;
-    // for (char[] row : matrixBoard) {
-    // for (char piece : row) {
-    // if (piece != '.') {
-    // count++;
-    // }
-    // }
-    // }
-    // return count;
-    // }
 
 }
