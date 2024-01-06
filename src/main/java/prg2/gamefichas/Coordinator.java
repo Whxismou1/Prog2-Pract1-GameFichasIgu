@@ -19,33 +19,31 @@ public class Coordinator {
         numJuegos = getNumJuegos();
         getEntrada();
         numTablerosPasados = countNumTablerosPasados();
-
+        // System.out.println("Primera lista: " + inputList);
         checkEntrada(numJuegos, numTablerosPasados);
-
+        // System.out.println("Lista valida: " + validList);
         checkEntradaSameFilsAndCols();
 
-        int juegosReales = validList.size();
-
         checkLimitRowsAndCols();
+
+        int juegosReales = validDefinitiveList.size();
+
+        // System.out.println("Juegos reales: " + juegosReales);
+        // System.out.println("Lista valida final: " + validDefinitiveList);
 
         new Board(juegosReales, validDefinitiveList);
 
     }
 
     private void checkLimitRowsAndCols() {
-        // System.out.println(validDefinitiveList);
-        // System.out.println(validList);
-        // System.out.println(validList.get(0));
-        // System.out.println(validList.get(0).size());
-        // System.out.println(validList.get(0).get(0));
-        // System.out.println(validList.get(0).get(0).length());
+
         for (int i = 0; i < validList.size(); i++) {
             List<String> actualList = validList.get(i);
 
             int nRows = actualList.size();
             int nCols = actualList.get(0).length();
 
-            if (nRows >= MINIMUM_ROWS && nCols <= MAXIMUM_COLS) {
+            if ((nRows >= MINIMUM_ROWS && nRows <= MAXIMUM_COLS) && (nCols >= MINIMUM_ROWS && nCols <= MAXIMUM_COLS)) {
                 validDefinitiveList.add(actualList);
             }
 
@@ -55,14 +53,21 @@ public class Coordinator {
     private void checkEntradaSameFilsAndCols() {
 
         if (validList.size() > 0) {
+            /** Old */
+            // for (int i = 0; i < validList.size(); i++) {
 
-            for (int i = 0; i < validList.size(); i++) {
+            // if (checkRow(validList.get(i)) != true) {
+            // validList.remove(i);
+            // }
 
+            // }
+            /** New */
+            for (int i = validList.size() - 1; i >= 0; i--) {
                 if (checkRow(validList.get(i)) != true) {
-                    validList.remove(i);
+                    validList.subList(i, validList.size()).clear();
                 }
-
             }
+
         } else {
 
             exitGame(1);
@@ -112,6 +117,9 @@ public class Coordinator {
         for (int i = 0; i < notValid.length; i++) {
             if (notValid[i] == false) {
                 validList.add(inputList.get(i));
+            } else {
+                inputList.clear();
+                break;
             }
         }
 
@@ -144,8 +152,9 @@ public class Coordinator {
     private void getEntrada() {
         List<String> currentTablero = new ArrayList<>();
         int numSaltosLinea = 0;
+
         while (sc.hasNextLine()) {
-            String ln = sc.nextLine().toUpperCase().trim();
+            String ln = sc.nextLine().trim();
 
             if (!ln.isEmpty()) {
                 currentTablero.add(ln);
