@@ -2,6 +2,8 @@
 
 Este programa resuelve el juego llamado "Fichas Iguales", que se juega en una matriz rectangular con fichas de colores y tiene como objetivo eliminar grupos de fichas para obtener la mayor puntuación.
 
+>Este ejercicio pertenece a la practica intermedia de la asignatura de Programación II de 2º Ingeniería Informatica
+
 ## Uso
 
 El programa toma como entrada una serie de juegos en un formato específico y proporciona la estrategia óptima para cada juego, incluyendo los movimientos y la puntuación final.
